@@ -53,7 +53,11 @@ Returns paginated update history with query parameters:
 
 ```
 .
-├── app.py                 # FastAPI application
+├── app.py                 # FastAPI application entry point
+├── models.py              # Pydantic models for validation
+├── routes.py              # API endpoints and routes
+├── state.py               # Shared state management
+├── database.py            # SQLite database operations
 ├── requirements.txt       # Python dependencies
 ├── Dockerfile             # Multi-stage Docker build
 ├── terraform/             # Terraform configuration

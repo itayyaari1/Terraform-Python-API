@@ -1,43 +1,32 @@
 """
 FastAPI application with shared state management.
+Main entry point that initializes the application and registers routes.
 """
 
-from datetime import datetime, timezone
-from fastapi import FastAPI
-from typing import Dict
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from pydantic import ValidationError
+from routes import router
+from database import init_database
 
 # Initialize FastAPI app
 app = FastAPI(title="Python API", version="1.0.0")
 
-# Shared state in memory
-state: Dict[str, any] = {
-    "counter": 0,
-    "message": "initial"
-}
+# Initialize database on startup
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database on application startup."""
+    init_database()
 
-# Application start timestamp for uptime calculation
-start_timestamp: datetime = datetime.now(timezone.utc)
+# Register routes
+app.include_router(router)
 
 
-@app.get("/status")
-async def get_status():
-    """
-    Returns the current state and metadata.
-    
-    Response includes:
-    - state: Current counter and message values
-    - timestamp: Current UTC timestamp
-    - uptime_seconds: Seconds since application startup
-    """
-    current_timestamp = datetime.now(timezone.utc)
-    uptime_seconds = int((current_timestamp - start_timestamp).total_seconds())
-    
-    return {
-        "state": {
-            "counter": state["counter"],
-            "message": state["message"]
-        },
-        "timestamp": current_timestamp.isoformat(),
-        "uptime_seconds": uptime_seconds
-    }
+@app.exception_handler(ValidationError)
+async def validation_exception_handler(request: Request, exc: ValidationError):
+    """Convert Pydantic validation errors to HTTP 400."""
+    return JSONResponse(
+        status_code=400,
+        content={"detail": str(exc)}
+    )
 
