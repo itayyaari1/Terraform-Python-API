@@ -34,7 +34,6 @@ def init_database():
 def log_update(old_value: Dict, new_value: Dict):
     """
     Log a state update to the database.
-    
     Args:
         old_value: Previous state dictionary
         new_value: New state dictionary
@@ -58,11 +57,9 @@ def log_update(old_value: Dict, new_value: Dict):
 def get_logs(page: int = 1, limit: int = 10) -> Dict:
     """
     Retrieve paginated logs from the database.
-    
     Args:
         page: Page number (1-indexed)
         limit: Number of records per page
-    
     Returns:
         Dictionary with logs, pagination info, and total count
     """

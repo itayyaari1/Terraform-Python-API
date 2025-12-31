@@ -17,7 +17,6 @@ router = APIRouter()
 async def get_status():
     """
     Returns the current state and metadata.
-    
     Response includes:
     - state: Current counter and message values
     - timestamp: Current UTC timestamp
@@ -43,7 +42,6 @@ async def update_state(
 ):
     """
     Updates the shared state with new counter and/or message values.
-    
     Flow:
     1. (Optional) Validate API key from request header
     2. Validate request payload
@@ -93,7 +91,6 @@ async def get_logs_endpoint(
 ):
     """
     Returns paginated update history.
-    
     Query parameters:
     - page: Page number (default: 1, minimum: 1)
     - limit: Number of records per page (default: 10, minimum: 1, maximum: 100)
