@@ -6,8 +6,8 @@ Main entry point that initializes the application and registers routes.
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
-from routes import router
-from database import init_database
+from app.routes import router
+from app.database import init_database
 
 # Initialize FastAPI app
 app = FastAPI(title="Python API", version="1.0.0")

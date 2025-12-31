@@ -40,26 +40,28 @@ Local Machine
 
 ```
 .
-├── app.py                 # FastAPI application entry point
-├── models.py              # Pydantic models for validation
-├── routes.py              # API endpoints and routes
-├── state.py               # Shared state management
-├── database.py            # SQLite database operations
-├── auth.py                # API key authentication
-├── requirements.txt       # Python dependencies
-├── Dockerfile             # Multi-stage Docker build
-├── .dockerignore          # Docker build exclusions
-├── .gitignore             # Git exclusions
-├── terraform/             # Terraform configuration
-│   ├── provider.tf        # AWS provider configuration
-│   ├── main.tf             # EC2 instance and security group
-│   ├── variables.tf        # Input variables
-│   ├── outputs.tf          # Output values (public IP, instance ID)
-│   ├── user_data.sh        # Bootstrap script for EC2
-│   ├── deploy.sh           # Deployment script
-│   └── teardown.sh         # Teardown script
-├── design_review.md        # Complete design specifications
-└── README.md               # This file
+├── app/                    # Application package
+│   ├── __init__.py
+│   ├── main.py             # FastAPI application entry point
+│   ├── models.py            # Pydantic models for validation
+│   ├── routes.py            # API endpoints and routes
+│   ├── state.py             # Shared state management
+│   ├── database.py          # SQLite database operations
+│   └── auth.py              # API key authentication
+├── requirements.txt         # Python dependencies
+├── Dockerfile               # Multi-stage Docker build
+├── .dockerignore            # Docker build exclusions
+├── .gitignore               # Git exclusions
+├── terraform/               # Terraform configuration
+│   ├── provider.tf          # AWS provider configuration
+│   ├── main.tf              # EC2 instance and security group
+│   ├── variables.tf         # Input variables
+│   ├── outputs.tf           # Output values (public IP, instance ID)
+│   ├── user_data.sh         # Bootstrap script for EC2
+│   ├── deploy.sh            # Deployment script
+│   └── teardown.sh          # Teardown script
+├── design_review.md         # Complete design specifications
+└── README.md                # This file
 ```
 
 ## API Endpoints
@@ -225,7 +227,7 @@ pip install -r requirements.txt
 ### 3. Run the Application
 
 ```bash
-uvicorn app:app --host 0.0.0.0 --port 5000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 5000 --reload
 ```
 
 The API will be available at `http://localhost:5000`

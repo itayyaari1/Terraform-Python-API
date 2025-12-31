@@ -4,10 +4,10 @@ API routes and endpoints.
 
 from datetime import datetime, timezone
 from fastapi import APIRouter, Query, Depends
-from models import UpdateRequest
-from state import state, start_timestamp
-from database import log_update, get_logs
-from auth import verify_api_key
+from app.models import UpdateRequest
+from app.state import state, start_timestamp
+from app.database import log_update, get_logs
+from app.auth import verify_api_key
 
 # Create router
 router = APIRouter()

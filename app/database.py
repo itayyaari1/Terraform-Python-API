@@ -100,3 +100,4 @@ def get_logs(page: int = 1, limit: int = 10) -> Dict:
         "limit": limit,
         "total": total
     }
+

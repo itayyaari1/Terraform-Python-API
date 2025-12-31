@@ -17,7 +17,7 @@ usermod -a -G docker ubuntu
 sleep 5
 
 # Create application directory
-mkdir -p /home/ubuntu/app
+mkdir -p /home/ubuntu/app/app
 cd /home/ubuntu/app
 
 # Create requirements.txt
@@ -27,8 +27,15 @@ uvicorn[standard]>=0.32.0
 pydantic>=2.10.0
 EOF
 
-# Create app.py
-cat > app.py << 'EOF'
+# Create app/__init__.py
+cat > app/__init__.py << 'EOF'
+"""
+Python API Application Package
+"""
+EOF
+
+# Create app/main.py
+cat > app/main.py << 'EOF'
 """
 FastAPI application with shared state management.
 Main entry point that initializes the application and registers routes.
@@ -37,8 +44,8 @@ Main entry point that initializes the application and registers routes.
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
-from routes import router
-from database import init_database
+from app.routes import router
+from app.database import init_database
 
 # Initialize FastAPI app
 app = FastAPI(title="Python API", version="1.0.0")
@@ -62,8 +69,8 @@ async def validation_exception_handler(request: Request, exc: ValidationError):
     )
 EOF
 
-# Create models.py
-cat > models.py << 'EOF'
+# Create app/models.py
+cat > app/models.py << 'EOF'
 """
 Pydantic models for request validation.
 """
@@ -85,18 +92,18 @@ class UpdateRequest(BaseModel):
         return self
 EOF
 
-# Create routes.py
-cat > routes.py << 'ROUTES_EOF'
+# Create app/routes.py
+cat > app/routes.py << 'ROUTES_EOF'
 """
 API routes and endpoints.
 """
 
 from datetime import datetime, timezone
 from fastapi import APIRouter, Query, Depends
-from models import UpdateRequest
-from state import state, start_timestamp
-from database import log_update, get_logs
-from auth import verify_api_key
+from app.models import UpdateRequest
+from app.state import state, start_timestamp
+from app.database import log_update, get_logs
+from app.auth import verify_api_key
 
 # Create router
 router = APIRouter()
@@ -192,8 +199,8 @@ async def get_logs_endpoint(
     return get_logs(page=page, limit=limit)
 ROUTES_EOF
 
-# Create state.py
-cat > state.py << 'EOF'
+# Create app/state.py
+cat > app/state.py << 'EOF'
 """
 Shared state management for the application.
 """
@@ -212,8 +219,8 @@ state: Dict[str, any] = {
 start_timestamp: datetime = datetime.now(timezone.utc)
 EOF
 
-# Create database.py
-cat > database.py << 'DB_EOF'
+# Create app/database.py
+cat > app/database.py << 'DB_EOF'
 """
 SQLite database operations for logging.
 """
@@ -321,8 +328,8 @@ def get_logs(page: int = 1, limit: int = 10) -> Dict:
     }
 DB_EOF
 
-# Create auth.py
-cat > auth.py << 'EOF'
+# Create app/auth.py
+cat > app/auth.py << 'EOF'
 """
 API key authentication for protected endpoints.
 """
@@ -402,8 +409,8 @@ WORKDIR /app
 # Copy only installed packages from builder stage
 COPY --from=builder /root/.local /root/.local
 
-# Copy application files
-COPY app.py models.py routes.py state.py database.py auth.py ./
+# Copy application package
+COPY app/ ./app/
 
 # Make sure scripts in .local are usable
 ENV PATH=/root/.local/bin:$PATH
@@ -412,7 +419,7 @@ ENV PATH=/root/.local/bin:$PATH
 EXPOSE 5000
 
 # Set entrypoint
-ENTRYPOINT ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "5000"]
+ENTRYPOINT ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5000"]
 EOF
 
 # Build Docker image

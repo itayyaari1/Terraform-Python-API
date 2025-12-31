@@ -21,8 +21,8 @@ WORKDIR /app
 # Copy only installed packages from builder stage
 COPY --from=builder /root/.local /root/.local
 
-# Copy application files
-COPY app.py models.py routes.py state.py database.py auth.py ./
+# Copy application package
+COPY app/ ./app/
 
 # Make sure scripts in .local are usable
 ENV PATH=/root/.local/bin:$PATH
@@ -31,5 +31,5 @@ ENV PATH=/root/.local/bin:$PATH
 EXPOSE 5000
 
 # Set entrypoint
-ENTRYPOINT ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "5000"]
+ENTRYPOINT ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5000"]
 
