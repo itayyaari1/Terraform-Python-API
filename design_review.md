@@ -48,7 +48,7 @@ Local Machine
 | Container      | Docker             | Package and run the application            |
 | Database       | SQLite             | Persist update logs                        |
 | Infrastructure | Terraform          | Provision and destroy AWS resources        |
-| Compute        | AWS EC2 (t2.micro) | Host the Docker container                  |
+| Compute        | AWS EC2 (t3.micro) | Host the Docker container                  |
 
 ---
 
@@ -221,19 +221,24 @@ terraform/
 ├── main.tf
 ├── variables.tf
 ├── outputs.tf
-└── user_data.sh
+├── user_data.sh
+├── deploy.sh
+└── teardown.sh
 ```
 
 ---
 
 ### EC2 Provisioning
 
-* AMI: Amazon Linux 2
-* Instance type: t2.micro
+* AMI: Ubuntu 22.04 LTS (dynamically fetched via `data "aws_ami"` block)
+* Instance type: t3.micro (free tier eligible)
+* Region: us-east-1 (hardcoded)
 * user_data script performs:
+  * System package updates (apt-get)
   * Docker installation
   * Docker daemon startup
-  * Application image build
+  * Application files creation
+  * Docker image build
   * Container run
 
 ---
@@ -272,27 +277,34 @@ Used for API verification after deployment.
 
 ### Step 2 – Base FastAPI Application
 
-* Create `app.py`
+* Create modular structure:
+  * `app.py` - Main entry point
+  * `state.py` - Shared state management
+  * `routes.py` - API endpoints
+  * `models.py` - Pydantic models
+  * `database.py` - SQLite operations
+  * `auth.py` - API key authentication
 * Implement shared state
 * Implement `GET /status`
 
 ### Step 3 – Update Endpoint and Validation
 
-* Add Pydantic model
-* Implement `POST /update`
+* Add Pydantic model in `models.py`
+* Implement `POST /update` in `routes.py`
 * Handle validation errors
 
 ### Step 4 – Logging Layer
 
-* Initialize SQLite database
+* Initialize SQLite database in `database.py`
 * Create logs table
 * Persist updates
 * Implement `GET /logs` with pagination
 
 ### Step 5 – Optional API Key Authentication
 
-* Add middleware or dependency
+* Create `auth.py` with dependency function
 * Read API key from environment
+* Apply to `POST /update` endpoint
 
 ### Step 6 – Dockerization
 
