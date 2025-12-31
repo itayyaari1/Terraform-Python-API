@@ -1,24 +1,24 @@
 #!/bin/bash
 
-# Update system packages
-yum update -y
+# Update system packages (Ubuntu uses apt)
+apt-get update -y
 
 # Install Docker
-yum install -y docker
+apt-get install -y docker.io
 
 # Start Docker service
 systemctl start docker
 systemctl enable docker
 
-# Add ec2-user to docker group (so we can run docker without sudo)
-usermod -a -G docker ec2-user
+# Add ubuntu user to docker group (Ubuntu uses 'ubuntu' user)
+usermod -a -G docker ubuntu
 
 # Wait a moment for Docker to be ready
 sleep 5
 
 # Create application directory
-mkdir -p /home/ec2-user/app
-cd /home/ec2-user/app
+mkdir -p /home/ubuntu/app
+cd /home/ubuntu/app
 
 # Create requirements.txt
 cat > requirements.txt << 'EOF'
