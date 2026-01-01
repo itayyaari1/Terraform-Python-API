@@ -8,7 +8,14 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 if [ -f "$PROJECT_ROOT/.env" ]; then
     # Source .env file, handling comments and empty lines properly
     set -a
-    source <(grep -v '^#' "$PROJECT_ROOT/.env" | grep -v '^$' | sed 's/^/export /')
+    # Read .env file, skip comments and empty lines, export variables
+    while IFS= read -r line || [ -n "$line" ]; do
+        # Skip comments and empty lines
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+        [[ -z "${line// }" ]] && continue
+        # Export the variable
+        export "$line"
+    done < "$PROJECT_ROOT/.env"
     set +a
 else
     echo "Error: .env file not found in project root"
