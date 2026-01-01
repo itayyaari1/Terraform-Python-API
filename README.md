@@ -369,19 +369,17 @@ Create a `.env` file in the project root:
 cp .env.example .env
 ```
 
-Edit `.env` and set your GitHub credentials:
+Edit `.env` and set your GitHub credentials. See `.env.example` for a template:
 
-```bash
-# GitHub Configuration
-GITHUB_USERNAME=your-github-username
-GITHUB_REPO_NAME=Terraform-Python-API
-GITHUB_TOKEN=ghp_your_token_here
-```
+**Required:**
+- `GITHUB_USERNAME` - Your GitHub username
+- `GITHUB_REPO_NAME` - Your repository name
+- `GITHUB_TOKEN` - Your GitHub personal access token
 
-**Important:**
-- Replace `your-github-username` with your actual GitHub username
-- Replace `ghp_your_token_here` with the token you created in Step 1
-- The `.env` file is already in `.gitignore` and will not be committed to version control
+**Optional:**
+- `API_KEY` - API key for `POST /update` endpoint authentication (leave empty to disable)
+
+**Important:** The `.env` file is already in `.gitignore` and will not be committed to version control
 
 ### Step 3: Configure AWS Credentials
 
@@ -435,8 +433,11 @@ The script will automatically:
 - Load variables from `.env` file
 - Construct the GitHub repository URL: `https://github.com/{GITHUB_USERNAME}/{GITHUB_REPO_NAME}.git`
 - Detect your public IP address
+- Pass API_KEY to Terraform (if set in `.env`)
 - Initialize Terraform
 - Deploy the infrastructure
+
+**Note:** If `API_KEY` is set in your `.env` file, it will be automatically passed to the EC2 instance and the Docker container will run with authentication enabled.
 
 **Option B: Manual deployment**
 ```bash
@@ -446,7 +447,9 @@ terraform init
 terraform apply \
   -var="my_ip=$MY_IP" \
   -var="github_repo=https://github.com/YOUR_USERNAME/Terraform-Python-API.git" \
-  -var="github_token=YOUR_TOKEN"
+  -var="github_token=YOUR_TOKEN" \
+  -var="api_key=YOUR_API_KEY"  # Optional: omit to disable authentication
+```
 ```
 
 ### What Happens During Deployment
@@ -527,6 +530,19 @@ This will:
 
 - **Optional API Key Authentication**: If the `API_KEY` environment variable is set in the container, the `POST /update` endpoint requires an `X-API-KEY` header
 - **No Authentication by Default**: If `API_KEY` is not set, authentication is disabled (suitable for development/testing)
+
+### Implementing API Key in Terraform
+
+**Enable Authentication:**
+- Add `API_KEY=your-secret-api-key-123` to your `.env` file
+- Deploy using `./deploy.sh` - the API key will be automatically passed to the container
+- The `POST /update` endpoint will require an `X-API-KEY` header with the matching value
+
+**Disable Authentication:**
+- Remove the `API_KEY` line from `.env`, or set it to empty: `API_KEY=`
+- Deploy again - authentication will be disabled and `POST /update` will work without API key
+
+**Note:** The API key is securely passed from `.env` → Terraform → EC2 user_data → Docker container. Never commit your `.env` file to version control.
 
 ### Best Practices
 

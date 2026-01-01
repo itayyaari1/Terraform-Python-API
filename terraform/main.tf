@@ -53,6 +53,7 @@ resource "aws_instance" "api" {
   user_data = templatefile("${path.module}/user_data.sh", {
     github_repo  = var.github_repo
     github_token = var.github_token
+    api_key      = var.api_key
   })
 
   tags = {

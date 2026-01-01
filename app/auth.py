@@ -10,9 +10,6 @@ from typing import Optional
 def get_api_key_from_env() -> Optional[str]:
     """
     Get API key from environment variable.
-    
-    Returns:
-        API key string if set, None if not configured (making auth optional)
     """
     return os.getenv("API_KEY")
 
@@ -23,12 +20,6 @@ async def verify_api_key(x_api_key: Optional[str] = Header(None, alias="X-API-KE
     
     If API_KEY environment variable is set, validates the provided key.
     If API_KEY is not set, authentication is disabled (optional).
-    
-    Args:
-        x_api_key: API key from X-API-KEY header
-    
-    Raises:
-        HTTPException: 401 if API key is required but missing or invalid
     """
     expected_api_key = get_api_key_from_env()
     

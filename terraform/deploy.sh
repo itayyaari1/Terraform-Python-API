@@ -42,12 +42,24 @@ fi
 # Construct full GitHub repository URL
 GITHUB_REPO="https://github.com/${GITHUB_USERNAME}/${GITHUB_REPO_NAME}.git"
 
+# API key is optional - if not set, authentication will be disabled
+API_KEY="${API_KEY:-}"
+
 MY_IP=$(curl -s https://checkip.amazonaws.com)
 cd "$SCRIPT_DIR"
 terraform init
-terraform apply \
-  -var="my_ip=$MY_IP" \
-  -var="github_repo=$GITHUB_REPO" \
-  -var="github_token=$GITHUB_TOKEN" \
-  -auto-approve
+
+# Build terraform apply command
+TERRAFORM_CMD="terraform apply \
+  -var=\"my_ip=$MY_IP\" \
+  -var=\"github_repo=$GITHUB_REPO\" \
+  -var=\"github_token=$GITHUB_TOKEN\""
+
+# Add API key if provided
+if [ -n "$API_KEY" ]; then
+  TERRAFORM_CMD="$TERRAFORM_CMD -var=\"api_key=$API_KEY\""
+fi
+
+# Execute terraform apply
+eval "$TERRAFORM_CMD -auto-approve"
 

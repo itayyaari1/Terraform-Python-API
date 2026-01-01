@@ -26,3 +26,10 @@ variable "github_token" {
   sensitive   = true
 }
 
+variable "api_key" {
+  description = "Optional API key for POST /update endpoint authentication (leave empty to disable auth)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+

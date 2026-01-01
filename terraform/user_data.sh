@@ -48,11 +48,22 @@ docker rm python-api 2>/dev/null || true
 
 # Run Docker container
 echo "Starting Docker container..."
-docker run -d \
-  --name python-api \
-  --restart unless-stopped \
-  -p 5000:5000 \
-  python-api:latest
+if [ -n "${api_key}" ]; then
+  echo "API key authentication enabled"
+  docker run -d \
+    --name python-api \
+    --restart unless-stopped \
+    -p 5000:5000 \
+    -e API_KEY="${api_key}" \
+    python-api:latest
+else
+  echo "API key authentication disabled (no API key provided)"
+  docker run -d \
+    --name python-api \
+    --restart unless-stopped \
+    -p 5000:5000 \
+    python-api:latest
+fi
 
 # Wait a moment for the container to start
 sleep 5
