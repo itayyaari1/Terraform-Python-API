@@ -10,31 +10,121 @@ This project implements a RESTful API that:
 - Persists update history in SQLite
 - Supports optional API key authentication
 - Automates infrastructure provisioning and teardown with Terraform
+- **Deploys code from GitHub** - No hardcoded application files
 
-## Architecture
+## Quick Start
+
+1. **Create GitHub token** at https://github.com/settings/tokens
+2. **Create `.env` file** in project root:
+   ```bash
+   GITHUB_USERNAME=your-username
+   GITHUB_REPO_NAME=Terraform-Python-API
+   GITHUB_TOKEN=ghp_your_token_here
+   ```
+3. **Configure AWS**: `aws configure`
+4. **Push code to GitHub** (if not already done)
+5. **Deploy**: `cd terraform && ./deploy.sh`
+6. **Test**: Wait 2-3 minutes, then visit `http://$(terraform output -raw public_ip):5000/docs`
+
+## Application Architecture
 
 ```
-Local Machine
- └── Terraform
-      ├── Creates EC2 Instance
-      ├── Creates Security Group (IP-restricted)
-      └── user_data bootstrap script
-            └── Docker Engine
-                 └── Python API Container
-                       ├── FastAPI application
-                       ├── In-memory shared state
-                       └── SQLite database (logs)
+┌─────────────────────────────────────────────────────────┐
+│                    FastAPI Application                   │
+│                      (app/main.py)                       │
+└────────────────────┬────────────────────────────────────┘
+                     │
+         ┌───────────┴───────────┐
+         │                       │
+    ┌────▼────┐            ┌────▼────┐
+    │ Routes  │            │  Auth   │
+    │(routes) │            │  (auth)  │
+    └────┬────┘            └────┬────┘
+         │                      │
+    ┌────┴──────────────────────┴────┐
+    │                                 │
+┌───▼────┐  ┌──────────┐  ┌─────────▼──┐
+│ Models │  │  State   │  │  Database  │
+│(models)│  │ (state)  │  │(database)  │
+└────────┘  └──────────┘  └────────────┘
 ```
 
-## Components
+### Application Components
 
-| Component      | Technology         | Responsibility                             |
-| -------------- | ------------------ | ------------------------------------------ |
-| API            | FastAPI            | Expose REST endpoints, validation, logging |
-| Container      | Docker             | Package and run the application            |
-| Database       | SQLite             | Persist update logs                        |
-| Infrastructure | Terraform          | Provision and destroy AWS resources        |
-| Compute        | AWS EC2 (t3.micro) | Host the Docker container                  |
+| Component | File | Responsibility |
+|-----------|------|---------------|
+| **FastAPI App** | `app/main.py` | Application entry point, registers routes, handles exceptions |
+| **Routes** | `app/routes.py` | API endpoints: `/status`, `/update`, `/logs` |
+| **Models** | `app/models.py` | Pydantic models for request validation |
+| **State** | `app/state.py` | In-memory shared state (counter, message) |
+| **Database** | `app/database.py` | SQLite operations for logging updates |
+| **Auth** | `app/auth.py` | Optional API key authentication |
+
+### Application Flow
+
+#### GET /status Flow
+```
+Client Request
+    ↓
+FastAPI Router (routes.py)
+    ↓
+Read from State (state.py)
+    ↓
+Calculate uptime from start_timestamp
+    ↓
+Return JSON Response
+```
+
+#### POST /update Flow
+```
+Client Request
+    ↓
+FastAPI Router (routes.py)
+    ↓
+Auth Dependency (auth.py) - Optional API key check
+    ↓
+Model Validation (models.py) - Validate request body
+    ↓
+Capture Previous State (state.py)
+    ↓
+Update State (state.py)
+    ↓
+Log to Database (database.py) - Persist change
+    ↓
+Return Updated State
+```
+
+#### GET /logs Flow
+```
+Client Request
+    ↓
+FastAPI Router (routes.py)
+    ↓
+Query Parameter Validation (page, limit)
+    ↓
+Database Query (database.py) - Paginated retrieval
+    ↓
+Format Logs (JSON parsing)
+    ↓
+Return Paginated Response
+```
+
+### Data Flow
+
+**State Management:**
+- **In-Memory**: `state.py` maintains `counter` and `message` in process memory
+- **Persistence**: All state changes are logged to SQLite database
+- **Lifecycle**: State resets on container restart, but logs persist
+
+**Database Schema:**
+```sql
+logs (
+    id INTEGER PRIMARY KEY,
+    timestamp TEXT,
+    old_value TEXT,  -- JSON string
+    new_value TEXT   -- JSON string
+)
+```
 
 ## Project Structure
 
@@ -160,6 +250,7 @@ FastAPI automatically provides interactive API documentation:
 2. **Docker** - For containerization and local testing
 3. **Terraform** (>= 1.0) - For infrastructure provisioning
 4. **AWS CLI** - For AWS authentication and verification
+5. **Git** - For version control and GitHub integration
 
 ### AWS Requirements
 
@@ -177,6 +268,15 @@ FastAPI automatically provides interactive API documentation:
    - `ec2:RevokeSecurityGroupIngress`
 
    **Quick Setup:** Attach the `AmazonEC2FullAccess` policy to your IAM user/role for full EC2 permissions.
+
+### GitHub Requirements
+
+1. **GitHub Account** - With a repository containing your application code
+2. **GitHub Personal Access Token** - For authentication (create at https://github.com/settings/tokens)
+3. **Repository Structure** - Your GitHub repo must contain:
+   - `app/` directory with all application files
+   - `requirements.txt`
+   - `Dockerfile`
 
 ### Installation
 
@@ -244,8 +344,50 @@ docker run -p 5000:5000 python-api
 
 ## Deployment with Terraform
 
-### 1. Configure AWS Credentials
+This project uses **GitHub** to store and deploy the application code. The EC2 instance will automatically clone your repository and deploy it.
 
+### Prerequisites
+
+1. **GitHub Repository**: Your code must be pushed to a GitHub repository
+2. **GitHub Personal Access Token**: Required for authentication (even for public repos, it helps avoid rate limits)
+
+### Step 1: Create GitHub Personal Access Token
+
+1. Go to [GitHub Settings > Developer settings > Personal access tokens > Tokens (classic)](https://github.com/settings/tokens)
+2. Click "Generate new token (classic)"
+3. Give it a name (e.g., "Terraform-Python-API")
+4. Select scopes: At minimum, select `repo` (for private repos) or just leave it for public repos
+5. Click "Generate token"
+6. **Copy the token immediately** (you won't see it again!)
+
+### Step 2: Configure Environment Variables
+
+Create a `.env` file in the project root:
+
+```bash
+# In the project root directory
+cp .env.example .env
+```
+
+Edit `.env` and set your GitHub credentials:
+
+```bash
+# GitHub Configuration
+GITHUB_USERNAME=your-github-username
+GITHUB_REPO_NAME=Terraform-Python-API
+GITHUB_TOKEN=ghp_your_token_here
+```
+
+**Important:**
+- Replace `your-github-username` with your actual GitHub username
+- Replace `ghp_your_token_here` with the token you created in Step 1
+- The `.env` file is already in `.gitignore` and will not be committed to version control
+
+### Step 3: Configure AWS Credentials
+
+You can either use `aws configure` or add AWS credentials to your `.env` file:
+
+**Option A: Using aws configure (recommended)**
 ```bash
 aws configure
 ```
@@ -256,7 +398,32 @@ Enter your:
 - Default region (e.g., `us-east-1`)
 - Default output format (e.g., `json`)
 
-### 2. Deploy to AWS
+**Option B: Add to .env file**
+```bash
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
+AWS_DEFAULT_REGION=us-east-1
+```
+
+### Step 4: Push Your Code to GitHub
+
+Make sure your code is pushed to GitHub:
+
+```bash
+# If you haven't already, initialize git and push
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin https://github.com/YOUR_USERNAME/Terraform-Python-API.git
+git push -u origin main
+```
+
+**Required files in your GitHub repository:**
+- `app/` directory with all application files
+- `requirements.txt`
+- `Dockerfile`
+
+### Step 5: Deploy to AWS
 
 **Option A: Use deploy script (recommended)**
 ```bash
@@ -264,25 +431,44 @@ cd terraform
 ./deploy.sh
 ```
 
+The script will automatically:
+- Load variables from `.env` file
+- Construct the GitHub repository URL: `https://github.com/{GITHUB_USERNAME}/{GITHUB_REPO_NAME}.git`
+- Detect your public IP address
+- Initialize Terraform
+- Deploy the infrastructure
+
 **Option B: Manual deployment**
 ```bash
 cd terraform
 MY_IP=$(curl -s https://checkip.amazonaws.com)
 terraform init
-terraform apply -var="my_ip=$MY_IP"
+terraform apply \
+  -var="my_ip=$MY_IP" \
+  -var="github_repo=https://github.com/YOUR_USERNAME/Terraform-Python-API.git" \
+  -var="github_token=YOUR_TOKEN"
 ```
 
-The script will:
-1. Automatically detect your public IP address
-2. Initialize Terraform
-3. Create EC2 instance (Ubuntu 22.04 LTS, t3.micro)
-4. Create security group (allows port 5000 from your IP only)
-5. Install Docker and deploy the application via user_data script
-6. Output the public IP address
+### What Happens During Deployment
+
+1. **Terraform creates:**
+   - EC2 instance (Ubuntu 22.04 LTS, t3.micro)
+   - Security group (allows port 5000 from your IP only)
+
+2. **On the EC2 instance, the user_data script:**
+   - Updates system packages
+   - Installs Docker and Git
+   - Starts Docker service
+   - Clones your GitHub repository using the token
+   - Builds the Docker image from the cloned code
+   - Runs the application container on port 5000
+
+3. **Terraform outputs:**
+   - Public IP address of the EC2 instance
 
 **Note:** Wait 2-3 minutes after deployment for the instance to boot and the application to start.
 
-### 3. Test the Deployed API
+### Step 6: Test the Deployed API
 
 After deployment, Terraform will output the public IP address. Use it to test:
 
@@ -311,11 +497,16 @@ cd terraform
 ./teardown.sh
 ```
 
+The script will automatically load variables from `.env` file (or use placeholders if not found).
+
 **Option B: Manual teardown**
 ```bash
 cd terraform
 MY_IP=$(curl -s https://checkip.amazonaws.com)
-terraform destroy -var="my_ip=$MY_IP"
+terraform destroy \
+  -var="my_ip=$MY_IP" \
+  -var="github_repo=https://github.com/YOUR_USERNAME/Terraform-Python-API.git" \
+  -var="github_token=YOUR_TOKEN"
 ```
 
 This will:

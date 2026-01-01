@@ -50,7 +50,10 @@ resource "aws_instance" "api" {
   vpc_security_group_ids = [aws_security_group.api_sg.id]
 
   # User data script for Docker installation and container deployment
-  user_data = file("${path.module}/user_data.sh")
+  user_data = templatefile("${path.module}/user_data.sh", {
+    github_repo  = var.github_repo
+    github_token = var.github_token
+  })
 
   tags = {
     Name = "python-api-instance"

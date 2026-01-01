@@ -15,3 +15,14 @@ variable "ami_id" {
   default     = ""
 }
 
+variable "github_repo" {
+  description = "GitHub repository URL (e.g., https://github.com/username/repo.git)"
+  type        = string
+}
+
+variable "github_token" {
+  description = "GitHub personal access token for private repositories"
+  type        = string
+  sensitive   = true
+}
+
